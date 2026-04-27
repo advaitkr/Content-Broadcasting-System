@@ -1,0 +1,80 @@
+ARCHITECTURE NOTES
+
+1. Authentication & RBAC
+- JWT-based authentication implemented.
+- Token contains user id and role.
+- Middleware verifies token and attaches user to request.
+- Role-based middleware restricts access:
+  - Teacher: upload content, view own content
+  - Principal: approve/reject content
+
+2. Folder Structure
+- controllers: request/response handling
+- services: business logic
+- models: DB queries
+- middlewares: auth, RBAC, upload
+- utils: helpers (jwt, bcrypt)
+
+3. Upload Handling
+- Multer used for local file storage
+- File validation:
+  - Allowed: JPG, PNG, GIF
+  - Max size: 10MB
+- Files stored in /src/uploads
+
+4. Content Lifecycle
+uploaded → pending → approved / rejected
+
+- Teacher uploads → pending
+- Principal approves → approved
+- Rejection includes reason
+
+5. Scheduling & Rotation Logic (CORE)
+- Content grouped by subject
+- Each subject has its own slot
+- Each slot has ordered schedule entries
+- Each entry has duration (minutes)
+
+Algorithm:
+1. Fetch approved + active content
+2. Group by subject
+3. Fetch schedule for subject
+4. Compute total duration
+5. Use:
+   currentTime % totalDuration
+6. Iterate schedule to find active content
+
+This ensures:
+- Continuous looping
+- Time-based rotation
+- Subject isolation
+
+6. Public API
+GET /content/live/:teacherId
+
+- Returns only:
+  - Approved content
+  - Within time window
+  - Based on rotation logic
+
+7. Edge Case Handling
+- No content → return "No content available"
+- Approved but not active → ignored
+- Missing schedule → ignored
+- Invalid subject → ignored
+
+8. Database Design
+- users → authentication
+- content → uploaded files
+- content_slots → subject grouping
+- content_schedule → rotation logic
+
+9. Scalability
+- Can add Redis caching for live API
+- Can add queue for async processing
+- Stateless APIs (JWT based)
+
+10. Security
+- Password hashed with bcrypt
+- JWT for authentication
+- No sensitive data exposed
